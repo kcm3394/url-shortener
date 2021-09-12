@@ -8,8 +8,8 @@ default "Hello, World!" page.
 ## How to run
 
 ```
-$ go build main/main.go
-$ go run main/main.go
+$ go build main.go
+$ go run main.go
 ```
 
 With the default yaml file, go to localhost:8080/urlshort to be redirected to the original Gophercise repo.
@@ -18,8 +18,6 @@ With the default yaml file, go to localhost:8080/urlshort to be redirected to th
 The file is customizable via flags.
 
 ```
-$ cd main
-$ go build main.go
 $ ./main -h
 
 Usage of ./main:
