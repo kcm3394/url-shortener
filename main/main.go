@@ -5,34 +5,40 @@ import (
 	"fmt"
 	urlshort "github.com/kcm3394/url-shortener"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"path/filepath"
+)
+
+var (
+	fileName = flag.String("file", "default.yml", "the file containing shortened paths to URLs in either yaml or json format")
 )
 
 func main() {
 	mux := defaultMux()
 
-	// Build the MapHandler using the mux as the fallback
-	pathsToUrls := map[string]string{
-		"/urlshort-godoc": "https://godoc.org/github.com/gophercises/urlshort",
-		"/yaml-godoc":     "https://godoc.org/gopkg.in/yaml.v2",
-	}
-	mapHandler := urlshort.MapHandler(pathsToUrls, mux)
+	flag.Parse()
 
-	// Build the YAMLHandler using the mapHandler as the
-	// fallback
-	yamlFile := readArguments()
-	yaml, err := ioutil.ReadFile(yamlFile)
-	if err != nil {
-		panic(err)
+	ext := filepath.Ext(*fileName)
+
+	var handler http.Handler
+	var err error
+	if ext == ".yml" {
+		handler, err = urlshort.YAMLHandler(getBytesFromFile(*fileName), mux)
+		if err != nil {
+			panic(err)
+		}
+	} else if ext == ".json" {
+		handler, err = urlshort.JSONHandler(getBytesFromFile(*fileName), mux)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		log.Fatalf("Unsupported file type: %s", ext)
 	}
 
-	yamlHandler, err := urlshort.YAMLHandler(yaml, mapHandler)
-	if err != nil {
-		panic(err)
-	}
 	fmt.Println("Starting the server on :8080")
-	http.ListenAndServe(":8080", yamlHandler)
-
+	http.ListenAndServe(":8080", handler)
 }
 
 func defaultMux() *http.ServeMux {
@@ -41,13 +47,14 @@ func defaultMux() *http.ServeMux {
 	return mux
 }
 
-func readArguments() string {
-	yamlFile := flag.String("yaml", "default.yml", "a yaml file in the format of \n'- path: /some-path\n   url: https://www.some-url.com/demo'")
-	flag.Parse()
-
-	return *yamlFile
-}
-
 func hello(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Hello, world!")
+}
+
+func getBytesFromFile(fileName string) []byte {
+	f, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		log.Fatalf("Cannot read file %s: %v", fileName, err)
+	}
+	return f
 }

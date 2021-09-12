@@ -1,9 +1,15 @@
 package url_shortener
 
 import (
+	json2 "encoding/json"
 	"gopkg.in/yaml.v2"
 	"net/http"
 )
+
+type pathUrl struct {
+	Path string
+	URL  string
+}
 
 // MapHandler will return an http.HandlerFunc (which also
 // implements http.Handler) that will attempt to map any
@@ -20,6 +26,14 @@ func MapHandler(pathsToUrls map[string]string, fallback http.Handler) http.Handl
 		}
 		fallback.ServeHTTP(w, r)
 	}
+}
+
+func buildMap(parsedFile []pathUrl) map[string]string {
+	pathMap := map[string]string{}
+	for _, pathUrl := range parsedFile {
+		pathMap[pathUrl.Path] = pathUrl.URL
+	}
+	return pathMap
 }
 
 // YAMLHandler will parse the provided YAML and then return
@@ -47,11 +61,6 @@ func YAMLHandler(yml []byte, fallback http.Handler) (http.HandlerFunc, error) {
 	return MapHandler(pathMap, fallback), nil
 }
 
-type pathUrl struct {
-	Path string `yaml:"path"`
-	URL  string `yaml:"url"`
-}
-
 func parseYAML(yml []byte) ([]pathUrl, error) {
 	var pathURLs []pathUrl
 	err := yaml.Unmarshal(yml, &pathURLs)
@@ -61,10 +70,38 @@ func parseYAML(yml []byte) ([]pathUrl, error) {
 	return pathURLs, nil
 }
 
-func buildMap(parsedYaml []pathUrl) map[string]string {
-	pathMap := map[string]string{}
-	for _, pathUrl := range parsedYaml {
-		pathMap[pathUrl.Path] = pathUrl.URL
+// JSONHandler will parse the provided JSON and then return
+// an http.HandlerFunc (which also implements http.Handler)
+// that will attempt to map any paths to their corresponding
+// URL. If the path is not provided in the JSON, then the
+// fallback http.Handler will be called instead.
+//
+// JSON is expected to be in the format:
+// [
+//     {"path": "/value", "url": "https://..."},
+//     {"path": "/value", "url": "https://..."},
+//		...
+// ]
+//
+// The only errors that can be returned all related to having
+// invalid JSON data.
+//
+// See MapHandler to create a similar http.HandlerFunc via
+// a mapping of paths to urls.
+func JSONHandler(json []byte, fallback http.Handler) (http.HandlerFunc, error) {
+	parsedJson, err := parseJson(json)
+	if err != nil {
+		return nil, err
 	}
-	return pathMap
+	pathMap := buildMap(parsedJson)
+	return MapHandler(pathMap, fallback), nil
+}
+
+func parseJson(json []byte) ([]pathUrl, error) {
+	var pathURLs []pathUrl
+	err := json2.Unmarshal(json, &pathURLs)
+	if err != nil {
+		return nil, err
+	}
+	return pathURLs, nil
 }
