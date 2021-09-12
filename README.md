@@ -15,15 +15,14 @@ $ go run main/main.go
 With the default yaml file, go to localhost:8080/urlshort to be redirected to the original Gophercise repo.
 
 ## Flags
-The yaml file is customizable via flags.
+The file is customizable via flags.
 
 ```
 $ cd main
+$ go build main.go
 $ ./main -h
 
 Usage of ./main:
-  -yaml string
-        a yaml file in the format of 
-        '- path: /some-path
-           url: https://www.some-url.com/demo' (default "default.yml")
+  -file string
+        the file containing shortened paths to URLs in either yaml or json format (default "default.yml")
 ```
